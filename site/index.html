@@ -102,13 +102,21 @@
       if (!ids.has(id)) { tile.remove(); tiles.delete(id); }
     }
     for (const v of wanted) {
-      if (!tiles.has(v.id)) {
+      const status = v.status === "upcoming" ? "upcoming" : "live";
+      const existing = tiles.get(v.id);
+      if (!existing) {
         const tile = makeTile(v);
+        tile.dataset.status = status;
         tiles.set(v.id, tile);
         grid.appendChild(tile);
+      } else if (existing.dataset.status !== status) {
+        // A scheduled stream has started: reload its player so it plays.
+        existing.dataset.status = status;
+        const f = existing.firstChild;
+        f.src = f.src;
       }
     }
-    emptyMsg.textContent = "No streams are live right now.";
+    emptyMsg.textContent = "No streams are live or scheduled for today.";
     render();
   }
 
