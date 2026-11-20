@@ -1,7 +1,7 @@
-# nzclive
+# nzdclive (NZ Domestic Cricket Live)
 
 A GitHub Pages site that shows every stream currently live on the
-[New Zealand Cricket YouTube channel](https://www.youtube.com/channel/UCuKowzPg2-A0FcmyPa3yWug/streams),
+[YouTube channel](https://www.youtube.com/channel/UCuKowzPg2-A0FcmyPa3yWug/streams),
 tiled to fill the screen.
 
 ## How it works
