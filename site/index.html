@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<title>NZC live</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #000; color: #ccc; overflow: hidden;
+    font: 16px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  #grid { position: fixed; inset: 0; display: flex; flex-wrap: wrap;
+    justify-content: center; align-content: center; }
+  .tile { position: relative; overflow: hidden; background: #000; }
+  .tile iframe { position: absolute; top: 50%; left: 50%; border: 0;
+    transform: translate(-50%, -50%); }
+  #empty { position: fixed; inset: 0; display: none; place-items: center; text-align: center; padding: 16px; }
+  #empty a { color: #8ab4f8; }
+</style>
+</head>
+<body>
+<div id="grid"></div>
+<div id="empty">
+  <div>
+    <p id="empty-msg">Checking for live streams…</p>
+    <p><a href="https://www.youtube.com/channel/UCuKowzPg2-A0FcmyPa3yWug/streams" rel="noopener noreferrer">Channel streams on YouTube</a></p>
+  </div>
+</div>
+<script>
+(() => {
+  "use strict";
+  const ASPECT = 16 / 9;
+  // For 5 or 6 streams a 3x2 grid is used and each video is scaled up to fill
+  // its cell height, trimming the sides. This caps how much width may be cut
+  // (0.25 = up to a quarter); any remaining gap shows as thin bars top and bottom.
+  const MAX_CROP = 0.25;
+  const POLL_MS = 60 * 1000;
+  const ID_RE = /^[A-Za-z0-9_-]{11}$/;
+
+  const grid = document.getElementById("grid");
+  const empty = document.getElementById("empty");
+  const emptyMsg = document.getElementById("empty-msg");
+  const tiles = new Map(); // video id -> tile element (kept so players don't reload)
+
+  // Pick columns/rows so 16:9 tiles are as large as possible.
+  function layout(n, W, H) {
+    if (n === 5 || n === 6) {
+      const cellW = W / 3, cellH = H / 2;
+      let vw = cellH * ASPECT;
+      if (vw > cellW) vw = Math.min(vw, cellW / (1 - MAX_CROP));
+      else vw = cellW; // wide viewport: no crop needed
+      return { cols: 3, cellW, cellH, vw, vh: vw / ASPECT };
+    }
+    let best = null;
+    for (let cols = 1; cols <= n; cols++) {
+      const rows = Math.ceil(n / cols);
+      const w = Math.min(W / cols, (H / rows) * ASPECT);
+      // Prefer the larger tile; on a tie, prefer fewer rows (side by side).
+      if (!best || w >= best.w - 0.5) best = { cols, w };
+    }
+    const vw = best.w, vh = vw / ASPECT;
+    return { cols: best.cols, cellW: vw, cellH: vh, vw, vh };
+  }
+
+  function render() {
+    const n = tiles.size;
+    empty.style.display = n ? "none" : "grid";
+    if (!n) return;
+    const W = window.innerWidth, H = window.innerHeight;
+    const L = layout(n, W, H);
+    // Floor to whole pixels so rounding never pushes a tile onto a new row.
+    const cw = Math.floor(L.cellW), ch = Math.floor(L.cellH);
+    grid.style.width = (cw * L.cols) + "px";
+    grid.style.left = ((W - cw * L.cols) / 2) + "px";
+    grid.style.right = "auto";
+    for (const tile of tiles.values()) {
+      tile.style.width = cw + "px";
+      tile.style.height = ch + "px";
+      const f = tile.firstChild;
+      f.style.width = Math.ceil(L.vw) + "px";
+      f.style.height = Math.ceil(L.vh) + "px";
+    }
+  }
+
+  function makeTile(v) {
+    const tile = document.createElement("div");
+    tile.className = "tile";
+    const f = document.createElement("iframe");
+    const params = new URLSearchParams({ autoplay: "1", mute: "1", playsinline: "1", rel: "0" });
+    f.src = "https://www.youtube-nocookie.com/embed/" + v.id + "?" + params;
+    f.title = typeof v.title === "string" && v.title ? v.title : "Live stream";
+    f.allow = "autoplay; encrypted-media; picture-in-picture; fullscreen";
+    f.allowFullscreen = true;
+    f.referrerPolicy = "strict-origin-when-cross-origin";
+    tile.appendChild(f);
+    return tile;
+  }
+
+  function update(list) {
+    const wanted = list.filter(v => v && typeof v.id === "string" && ID_RE.test(v.id));
+    const ids = new Set(wanted.map(v => v.id));
+    for (const [id, tile] of tiles) {
+      if (!ids.has(id)) { tile.remove(); tiles.delete(id); }
+    }
+    for (const v of wanted) {
+      if (!tiles.has(v.id)) {
+        const tile = makeTile(v);
+        tiles.set(v.id, tile);
+        grid.appendChild(tile);
+      }
+    }
+    emptyMsg.textContent = "No streams are live right now.";
+    render();
+  }
+
+  async function poll() {
+    try {
+      const res = await fetch("live.json?t=" + Date.now(), { cache: "no-store" });
+      if (!res.ok) throw new Error(res.status);
+      const data = await res.json();
+      update(Array.isArray(data.live) ? data.live : []);
+    } catch (e) {
+      if (!tiles.size) emptyMsg.textContent = "Couldn't load the live stream list. Retrying…";
+    }
+  }
+
+  window.addEventListener("resize", render);
+  poll();
+  setInterval(poll, POLL_MS);
+})();
+</script>
+</body>
+</html>
