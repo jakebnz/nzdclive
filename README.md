@@ -12,8 +12,10 @@ fill the screen.
   marked upcoming whose start time falls on today's NZ date (earliest first).
   The exact start time of each upcoming stream is looked up by its video ID.
   No API key.
-- `.github/workflows/pages.yml` runs that script every 5 minutes (GitHub may
-  delay scheduled runs) and redeploys the site when the list changes.
+- `.github/workflows/pages.yml` runs that script and redeploys the site when
+  the list changes. GitHub's own 5-minute schedule is unreliable, so an external
+  cron service also starts it every 5 minutes through the `workflow_dispatch`
+  API (the token lives in that service, never in this repo).
 - `site/index.html` re-reads `live.json` every minute, adding and removing
   players without reloading the ones already playing. Players start muted.
   A scheduled stream shows YouTube's waiting screen until it starts, and its
