@@ -21,7 +21,8 @@ fill the screen.
 - Every 5 minutes the page checks each live player through YouTube's IFrame
   Player API. A player more than 15 seconds behind the live edge is moved back
   to live, and a paused one is resumed (`CHECK_MS` and `MAX_LAG_S` in
-  `site/index.html`).
+  `site/index.html`). The same check also runs whenever you switch back to
+  the tab.
 
 ## Layout
 

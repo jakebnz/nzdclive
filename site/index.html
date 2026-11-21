@@ -185,6 +185,10 @@
   poll();
   setInterval(poll, POLL_MS);
   setInterval(keepLive, CHECK_MS);
+  // Also catch up whenever the tab becomes visible again, regardless of the timer.
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) keepLive();
+  });
 })();
 </script>
 </body>
