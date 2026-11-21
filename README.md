@@ -18,6 +18,10 @@ fill the screen.
   players without reloading the ones already playing. Players start muted.
   A scheduled stream shows YouTube's waiting screen until it starts, and its
   player is reloaded once it goes live.
+- Every 5 seconds the page checks each live player through YouTube's IFrame
+  Player API. A player more than 15 seconds behind the live edge is moved back
+  to live, and a paused one is resumed (`CHECK_MS` and `MAX_LAG_S` in
+  `site/index.html`).
 
 ## Layout
 
